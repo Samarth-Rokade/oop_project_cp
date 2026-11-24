@@ -2,6 +2,7 @@ package ui;
 
 import model.Farmer;
 import service.LookupService;
+import service.OrderService;
 import service.ProductService;
 
 import javax.swing.BorderFactory;
@@ -14,15 +15,37 @@ import java.awt.GridLayout;
 /** Farmer home: My Products, Orders, Sales, Farm Profile. */
 public class FarmerDashboard extends SidebarDashboard {
 
+    private final Farmer farmer;
+    private final OrderService orderService = new OrderService();
+    private final FarmerOrdersPanel ordersPanel;
+
     public FarmerDashboard(Farmer farmer) {
+        this.farmer = farmer;
+        ordersPanel = new FarmerOrdersPanel(farmer, orderService, this::refreshNewOrderCount);
+
         addPage("products", "My Products", new ProductPanel(farmer, new ProductService(), new LookupService()));
-        addPage("orders", "Orders", placeholder("Orders", "Incoming orders will appear here (step 3)."));
+        addPage("orders", "Orders", ordersPanel);
         addPage("sales", "Sales", placeholder("Sales", "Sales history and product performance (step 4)."));
         addPage("profile", "Farm Profile", profilePage(farmer));
         if (!farmer.isVerified()) {
             setBanner(verificationBanner(farmer));
         }
         showPage("products");
+        refreshNewOrderCount();
+    }
+
+    @Override
+    protected void onPageShown(String key) {
+        if ("orders".equals(key)) {
+            ordersPanel.reload();
+        }
+    }
+
+    /** Sidebar shows "Orders (2)" when new orders are waiting. */
+    private void refreshNewOrderCount() {
+        Async.run(this, () -> orderService.countNewOrders(farmer),
+                count -> setPageTitle("orders", count == 0 ? "Orders" : "Orders (" + count + " new)"),
+                error -> { /* badge is optional - ignore */ });
     }
 
     private static JPanel verificationBanner(Farmer farmer) {

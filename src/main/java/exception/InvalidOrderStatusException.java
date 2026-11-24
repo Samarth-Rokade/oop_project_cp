@@ -14,6 +14,6 @@ public class InvalidOrderStatusException extends ValidationException {
             return "Order #" + orderId + " is already " + from.getLabel().toLowerCase() + ".";
         }
         return "Order #" + orderId + " is " + from.getLabel().toLowerCase()
-                + " and can no longer be " + to.getLabel().toLowerCase() + ".";
+                + ", so it cannot be " + to.getLabel().toLowerCase() + ".";
     }
 }

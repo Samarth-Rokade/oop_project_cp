@@ -12,12 +12,14 @@ import model.Product;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -179,14 +181,71 @@ public class OrderDAO {
         }
     }
 
-    /** Moves this order's payments from one status to another (e.g. PAID -> REFUNDED). */
+    /**
+     * Moves this order's payments from one status to another (e.g. PAID -> REFUNDED).
+     * A payment that becomes PAID (cash collected on delivery) gets today's date.
+     */
     public void updatePaymentStatus(Connection con, int orderId, PaymentStatus from, PaymentStatus to)
             throws SQLException {
-        String sql = "UPDATE payment SET payment_status = ? WHERE order_id = ? AND payment_status = ?";
+        String sql = "UPDATE payment SET payment_status = ?, "
+                   + "  payment_date = CASE WHEN ? = 'PAID' THEN CURRENT_TIMESTAMP ELSE payment_date END "
+                   + "WHERE order_id = ? AND payment_status = ?";
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, to.name());
-            ps.setInt(2, orderId);
-            ps.setString(3, from.name());
+            ps.setString(2, to.name());
+            ps.setInt(3, orderId);
+            ps.setString(4, from.name());
+            ps.executeUpdate();
+        }
+    }
+
+    /** Ids of the farmers whose products are in this order (normally exactly one). */
+    public List<Integer> findFarmerIds(Connection con, int orderId) throws SQLException {
+        String sql = "SELECT DISTINCT p.farmer_id FROM order_item oi "
+                   + "JOIN product p ON p.product_id = oi.product_id WHERE oi.order_id = ?";
+        List<Integer> ids = new ArrayList<>();
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ids.add(rs.getInt(1));
+                }
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Creates or updates the order's delivery row (delivery.order_id is
+     * UNIQUE, so ON DUPLICATE KEY UPDATE turns the INSERT into an UPDATE).
+     * Null partner/tracking/dates keep their current values.
+     */
+    public void saveDelivery(Connection con, int orderId, String status, LocalDate dispatchDate,
+                             LocalDate deliveryDate, String partner, String tracking) throws SQLException {
+        String sql = "INSERT INTO delivery (order_id, delivery_status, dispatch_date, delivery_date, "
+                   + "                      delivery_partner, tracking_reference) "
+                   + "VALUES (?, ?, ?, ?, ?, ?) "
+                   + "ON DUPLICATE KEY UPDATE "
+                   + "  delivery_status    = VALUES(delivery_status), "
+                   + "  dispatch_date      = COALESCE(VALUES(dispatch_date), dispatch_date), "
+                   + "  delivery_date      = COALESCE(VALUES(delivery_date), delivery_date), "
+                   + "  delivery_partner   = COALESCE(VALUES(delivery_partner), delivery_partner), "
+                   + "  tracking_reference = COALESCE(VALUES(tracking_reference), tracking_reference)";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            ps.setString(2, status);
+            ps.setObject(3, dispatchDate == null ? null : Date.valueOf(dispatchDate), Types.DATE);
+            ps.setObject(4, deliveryDate == null ? null : Date.valueOf(deliveryDate), Types.DATE);
+            ps.setObject(5, partner, Types.VARCHAR);
+            ps.setObject(6, tracking, Types.VARCHAR);
+            ps.executeUpdate();
+        }
+    }
+
+    /** A cancelled/rejected order will never be delivered. */
+    public void deleteDelivery(Connection con, int orderId) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement("DELETE FROM delivery WHERE order_id = ?")) {
+            ps.setInt(1, orderId);
             ps.executeUpdate();
         }
     }
@@ -230,52 +289,98 @@ public class OrderDAO {
         }
     }
 
-    /** A buyer's orders, newest first, with farm, payment and delivery summary. */
+    /** Shared SELECT for order lists: header + buyer, farm, payment and delivery summary. */
+    private static final String ORDER_LIST_SELECT =
+            "SELECT o.order_id, o.buyer_id, o.order_date, o.order_status, o.total_amount, "
+          + "       o.delivery_address_id, "
+          + "       u.full_name AS buyer_name, u.phone AS buyer_phone, b.buyer_type, "
+          + "       CONCAT(a.address_line, ', ', a.city, ' - ', a.postal_code) AS deliver_to, "
+          + "       (SELECT COUNT(*) FROM order_item oi WHERE oi.order_id = o.order_id) AS item_count, "
+          + "       (SELECT GROUP_CONCAT(DISTINCT f.farm_name ORDER BY f.farm_name SEPARATOR ', ') "
+          + "          FROM order_item oi "
+          + "          JOIN product p ON p.product_id = oi.product_id "
+          + "          JOIN farmer_profile f ON f.farmer_id = p.farmer_id "
+          + "         WHERE oi.order_id = o.order_id) AS farm_names, "
+          + "       pm.payment_method, pm.payment_status, "
+          + "       d.delivery_status, d.delivery_partner, d.tracking_reference "
+          + "FROM orders o "
+          + "JOIN users u ON u.user_id = o.buyer_id "
+          + "JOIN buyer_profile b ON b.buyer_id = o.buyer_id "
+          + "JOIN address a ON a.address_id = o.delivery_address_id "
+          + "LEFT JOIN payment pm ON pm.payment_id = "
+          + "     (SELECT MAX(p2.payment_id) FROM payment p2 WHERE p2.order_id = o.order_id) "
+          + "LEFT JOIN delivery d ON d.order_id = o.order_id ";
+
+    /** Orders that contain at least one product of the given farmer. */
+    private static final String FOR_FARMER =
+            "WHERE EXISTS (SELECT 1 FROM order_item oi "
+          + "              JOIN product p ON p.product_id = oi.product_id "
+          + "              WHERE oi.order_id = o.order_id AND p.farmer_id = ?) ";
+
+    /** A buyer's orders, newest first. */
     public List<Order> findByBuyer(int buyerId) {
-        String sql = "SELECT o.order_id, o.buyer_id, o.order_date, o.order_status, o.total_amount, "
-                   + "       o.delivery_address_id, "
-                   + "       CONCAT(a.address_line, ', ', a.city, ' - ', a.postal_code) AS deliver_to, "
-                   + "       (SELECT COUNT(*) FROM order_item oi WHERE oi.order_id = o.order_id) AS item_count, "
-                   + "       (SELECT GROUP_CONCAT(DISTINCT f.farm_name ORDER BY f.farm_name SEPARATOR ', ') "
-                   + "          FROM order_item oi "
-                   + "          JOIN product p ON p.product_id = oi.product_id "
-                   + "          JOIN farmer_profile f ON f.farmer_id = p.farmer_id "
-                   + "         WHERE oi.order_id = o.order_id) AS farm_names, "
-                   + "       pm.payment_method, pm.payment_status, d.delivery_status "
-                   + "FROM orders o "
-                   + "JOIN address a ON a.address_id = o.delivery_address_id "
-                   + "LEFT JOIN payment pm ON pm.payment_id = "
-                   + "     (SELECT MAX(p2.payment_id) FROM payment p2 WHERE p2.order_id = o.order_id) "
-                   + "LEFT JOIN delivery d ON d.order_id = o.order_id "
-                   + "WHERE o.buyer_id = ? "
-                   + "ORDER BY o.order_date DESC, o.order_id DESC";
+        return queryOrders(ORDER_LIST_SELECT + "WHERE o.buyer_id = ? ORDER BY o.order_date DESC, o.order_id DESC",
+                buyerId);
+    }
+
+    /** A farmer's received orders: new (PLACED) ones first, then newest first. */
+    public List<Order> findForFarmer(int farmerId) {
+        return queryOrders(ORDER_LIST_SELECT + FOR_FARMER
+                + "ORDER BY (o.order_status = 'PLACED') DESC, o.order_date DESC, o.order_id DESC", farmerId);
+    }
+
+    /** Number of new orders waiting for this farmer to accept or reject. */
+    public int countAwaitingFarmer(int farmerId) {
+        String sql = "SELECT COUNT(*) FROM orders o " + FOR_FARMER + "AND o.order_status = 'PLACED'";
+        try (Connection con = DatabaseConfig.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, farmerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not count new orders", e);
+        }
+    }
+
+    private List<Order> queryOrders(String sql, int id) {
         List<Order> orders = new ArrayList<>();
         try (Connection con = DatabaseConfig.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, buyerId);
+            ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Order o = new Order();
-                    o.setOrderId(rs.getInt("order_id"));
-                    o.setBuyerId(rs.getInt("buyer_id"));
-                    o.setOrderDate(rs.getTimestamp("order_date").toLocalDateTime());
-                    o.setStatus(OrderStatus.valueOf(rs.getString("order_status")));
-                    o.setTotalAmount(rs.getBigDecimal("total_amount"));
-                    o.setDeliveryAddressId(rs.getInt("delivery_address_id"));
-                    o.setDeliverTo(rs.getString("deliver_to"));
-                    o.setItemCount(rs.getInt("item_count"));
-                    o.setFarmNames(rs.getString("farm_names"));
-                    String method = rs.getString("payment_method");
-                    o.setPaymentMethod(method == null ? null : PaymentMethod.valueOf(method));
-                    String payStatus = rs.getString("payment_status");
-                    o.setPaymentStatus(payStatus == null ? null : PaymentStatus.valueOf(payStatus));
-                    o.setDeliveryStatus(rs.getString("delivery_status"));
-                    orders.add(o);
+                    orders.add(mapOrder(rs));
                 }
             }
             return orders;
         } catch (SQLException e) {
             throw new DataAccessException("Could not load orders", e);
         }
+    }
+
+    private static Order mapOrder(ResultSet rs) throws SQLException {
+        Order o = new Order();
+        o.setOrderId(rs.getInt("order_id"));
+        o.setBuyerId(rs.getInt("buyer_id"));
+        o.setBuyerName(rs.getString("buyer_name"));
+        o.setBuyerPhone(rs.getString("buyer_phone"));
+        o.setBuyerType(rs.getString("buyer_type"));
+        o.setOrderDate(rs.getTimestamp("order_date").toLocalDateTime());
+        o.setStatus(OrderStatus.valueOf(rs.getString("order_status")));
+        o.setTotalAmount(rs.getBigDecimal("total_amount"));
+        o.setDeliveryAddressId(rs.getInt("delivery_address_id"));
+        o.setDeliverTo(rs.getString("deliver_to"));
+        o.setItemCount(rs.getInt("item_count"));
+        o.setFarmNames(rs.getString("farm_names"));
+        String method = rs.getString("payment_method");
+        o.setPaymentMethod(method == null ? null : PaymentMethod.valueOf(method));
+        String payStatus = rs.getString("payment_status");
+        o.setPaymentStatus(payStatus == null ? null : PaymentStatus.valueOf(payStatus));
+        o.setDeliveryStatus(rs.getString("delivery_status"));
+        o.setDeliveryPartner(rs.getString("delivery_partner"));
+        o.setTrackingReference(rs.getString("tracking_reference"));
+        return o;
     }
 }

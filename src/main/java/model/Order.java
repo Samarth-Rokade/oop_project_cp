@@ -21,7 +21,43 @@ public class Order {
     private PaymentMethod paymentMethod;
     private PaymentStatus paymentStatus;
     private String deliveryStatus;
+    private String deliveryPartner;
+    private String trackingReference;
+    private String buyerPhone;
+    private String buyerType;
     private List<OrderItem> items = new ArrayList<>();
+
+    public String getDeliveryPartner() {
+        return deliveryPartner;
+    }
+
+    public void setDeliveryPartner(String deliveryPartner) {
+        this.deliveryPartner = deliveryPartner;
+    }
+
+    public String getTrackingReference() {
+        return trackingReference;
+    }
+
+    public void setTrackingReference(String trackingReference) {
+        this.trackingReference = trackingReference;
+    }
+
+    public String getBuyerPhone() {
+        return buyerPhone;
+    }
+
+    public void setBuyerPhone(String buyerPhone) {
+        this.buyerPhone = buyerPhone;
+    }
+
+    public String getBuyerType() {
+        return buyerType;
+    }
+
+    public void setBuyerType(String buyerType) {
+        this.buyerType = buyerType;
+    }
 
     public int getOrderId() {
         return orderId;
