@@ -8,6 +8,8 @@ USE farmer_marketplace;
 CREATE OR REPLACE VIEW active_product_view AS
 SELECT p.product_id,
        p.product_name,
+       p.description,
+       p.category_id,
        c.category_name,
        p.unit_code,
        p.available_quantity,
