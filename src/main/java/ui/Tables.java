@@ -6,6 +6,8 @@ import model.ListingStatus;
 import model.OrderStatus;
 import model.PaymentStatus;
 
+import util.Formats;
+
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
@@ -15,6 +17,9 @@ import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.Color;
 import java.awt.Component;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.function.Function;
 
 /** Shared table styling and renderers. */
 public final class Tables {
@@ -41,6 +46,31 @@ public final class Tables {
     public static void alignRight(JTable table, int... columns) {
         for (int c : columns) {
             table.getColumnModel().getColumn(c).setCellRenderer(new PaddedRenderer(SwingConstants.RIGHT));
+        }
+    }
+
+    /** Right-aligned BigDecimal columns shown as money (₹1,234.50). */
+    public static void moneyColumn(JTable table, int... columns) {
+        formatColumn(table, SwingConstants.RIGHT, v -> v instanceof BigDecimal d ? Formats.money(d) : String.valueOf(v), columns);
+    }
+
+    /** Right-aligned numeric columns without trailing zeros (12.5, 40). */
+    public static void numberColumn(JTable table, int... columns) {
+        formatColumn(table, SwingConstants.RIGHT, v -> v instanceof BigDecimal d ? Formats.quantity(d) : String.valueOf(v), columns);
+    }
+
+    public static void dateTimeColumn(JTable table, int... columns) {
+        formatColumn(table, SwingConstants.LEFT, v -> v instanceof LocalDateTime t ? Formats.dateTime(t) : String.valueOf(v), columns);
+    }
+
+    private static void formatColumn(JTable table, int alignment, Function<Object, String> format, int... columns) {
+        for (int c : columns) {
+            table.getColumnModel().getColumn(c).setCellRenderer(new PaddedRenderer(alignment) {
+                @Override
+                protected void setValue(Object value) {
+                    setText(value == null ? "" : format.apply(value));
+                }
+            });
         }
     }
 

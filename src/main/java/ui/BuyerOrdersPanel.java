@@ -36,6 +36,7 @@ public class BuyerOrdersPanel extends JPanel {
     private final JLabel detailHeader = new JLabel("Select an order to see its items.");
 
     private final JButton cancelButton = new JButton("Cancel order");
+    private final JButton receiptButton = new JButton("Save receipt...");
     private Integer pendingSelection;
     private int detailSequence;
 
@@ -87,10 +88,12 @@ public class BuyerOrdersPanel extends JPanel {
         JButton refresh = new JButton("Refresh");
         refresh.addActionListener(e -> reload());
         cancelButton.addActionListener(e -> cancelSelected());
+        receiptButton.addActionListener(e -> saveReceipt());
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
         buttons.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
         buttons.add(refresh);
+        buttons.add(receiptButton);
         buttons.add(cancelButton);
 
         add(top, BorderLayout.NORTH);
@@ -194,7 +197,19 @@ public class BuyerOrdersPanel extends JPanel {
         return r < 0 || r >= orders.size() ? Optional.empty() : Optional.of(orders.get(r));
     }
 
+    /** Writes a text receipt for the selected order (file I/O runs in the background). */
+    private void saveReceipt() {
+        selected().ifPresent(o -> Exports.chooseSaveFile(this, "receipt_order_" + o.getOrderId(), "txt", "Receipt")
+                .ifPresent(path -> Async.run(this, () -> {
+                    String text = util.ReceiptFormatter.format(o, orderService.getItems(buyer, o),
+                            java.time.LocalDateTime.now());
+                    util.ReceiptFormatter.save(path, text);
+                    return path;
+                }, saved -> Exports.savedMessage(this, saved, "Receipt for order #" + o.getOrderId() + " saved"))));
+    }
+
     private void updateButtons() {
+        receiptButton.setEnabled(selected().isPresent());
         cancelButton.setEnabled(selected().map(o -> o.getStatus().canTransitionTo(OrderStatus.CANCELLED)).orElse(false));
     }
 

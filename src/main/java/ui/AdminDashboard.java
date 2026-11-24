@@ -14,6 +14,7 @@ public class AdminDashboard extends SidebarDashboard {
     private final AdminCatalogPanel catalog;
     private final AdminOrdersPanel orders;
     private final AuditLogPanel activity;
+    private final AdminReportsPanel reports;
 
     public AdminDashboard(Admin admin) {
         this.admin = admin;
@@ -29,12 +30,14 @@ public class AdminDashboard extends SidebarDashboard {
         catalog = new AdminCatalogPanel(admin, service);
         orders = new AdminOrdersPanel(admin, service);
         activity = new AuditLogPanel(admin, service);
+        reports = new AdminReportsPanel(admin, new service.ReportService());
 
         addPage("overview", "Overview", overview);
         addPage("users", "Users", users);
         addPage("products", "Products", products);
         addPage("catalog", "Categories & Units", catalog);
         addPage("orders", "Orders & Payments", orders);
+        addPage("reports", "Reports", reports);
         addPage("activity", "Activity log", activity);
         showPage("overview");
         refreshPendingCount();
@@ -49,6 +52,7 @@ public class AdminDashboard extends SidebarDashboard {
             case "catalog" -> catalog.reload();
             case "orders" -> orders.reload();
             case "activity" -> activity.reload();
+            case "reports" -> reports.reload();
             default -> { }
         }
     }
