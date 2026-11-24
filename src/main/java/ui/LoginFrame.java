@@ -121,11 +121,18 @@ public class LoginFrame extends JFrame {
                 + "priya@buyer.com<br>Password for all demo accounts: password123</small></html>");
         hint.setForeground(Theme.TEXT_MUTED);
 
+        JButton register = new JButton("New here? Create an account");
+        register.putClientProperty("JButton.buttonType", "borderless");
+        register.setForeground(Theme.PRIMARY);
+        register.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        register.addActionListener(e -> new RegisterDialog(this, this::loginAfterRegistration).setVisible(true));
+
         Component[] rows = {
                 title, Box.createVerticalStrut(4), subtitle, Box.createVerticalStrut(24),
                 new JLabel("Email"), Box.createVerticalStrut(6), emailField, Box.createVerticalStrut(14),
                 new JLabel("Password"), Box.createVerticalStrut(6), passwordField, Box.createVerticalStrut(10),
-                messageLabel, Box.createVerticalStrut(10), loginButton, Box.createVerticalStrut(20), hint
+                messageLabel, Box.createVerticalStrut(10), loginButton, Box.createVerticalStrut(8), register,
+                Box.createVerticalStrut(14), hint
         };
         for (Component c : rows) {
             ((javax.swing.JComponent) c).setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -164,6 +171,14 @@ public class LoginFrame extends JFrame {
                 }
             }
         }.execute();
+    }
+
+    /** Signs a newly registered user straight in. */
+    private void loginAfterRegistration(String email, char[] password) {
+        emailField.setText(email);
+        passwordField.setText(new String(password));
+        Arrays.fill(password, '\0');
+        attemptLogin();
     }
 
     private void showError(Throwable cause) {

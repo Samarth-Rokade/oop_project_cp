@@ -2,6 +2,7 @@ package dao;
 
 import config.DatabaseConfig;
 import exception.DataAccessException;
+import exception.DuplicateEntryException;
 import model.AccountStatus;
 import model.Admin;
 import model.Buyer;
@@ -13,6 +14,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -53,6 +57,101 @@ public class UserDAO {
             }
         } catch (SQLException e) {
             throw new DataAccessException("Could not load user #" + userId, e);
+        }
+    }
+
+    public boolean emailExists(String email) {
+        try (Connection con = DatabaseConfig.getConnection();
+             PreparedStatement ps = con.prepareStatement("SELECT 1 FROM users WHERE email = ?")) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not check email", e);
+        }
+    }
+
+    /**
+     * Creates a farmer: one row in users and one in farmer_profile, in a
+     * single transaction (both or neither). New farmers wait for the
+     * administrator: account PENDING, verification PENDING.
+     *
+     * @return the new user id
+     */
+    public int insertFarmer(String fullName, String email, String phone, String passwordHash,
+                            String farmName, String farmAddress) {
+        String profileSql = "INSERT INTO farmer_profile (farmer_id, farm_name, farm_address, verification_status) "
+                          + "VALUES (?, ?, ?, 'PENDING')";
+        return insertUser(fullName, email, phone, passwordHash, Role.FARMER, AccountStatus.PENDING, (con, id) -> {
+            try (PreparedStatement ps = con.prepareStatement(profileSql)) {
+                ps.setInt(1, id);
+                ps.setString(2, farmName);
+                ps.setString(3, farmAddress);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    /** Creates a buyer (users + buyer_profile) in one transaction. Buyers are active immediately. */
+    public int insertBuyer(String fullName, String email, String phone, String passwordHash, Buyer.BuyerType type) {
+        String profileSql = "INSERT INTO buyer_profile (buyer_id, buyer_type) VALUES (?, ?)";
+        return insertUser(fullName, email, phone, passwordHash, Role.BUYER, AccountStatus.ACTIVE, (con, id) -> {
+            try (PreparedStatement ps = con.prepareStatement(profileSql)) {
+                ps.setInt(1, id);
+                ps.setString(2, type.name());
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    /** Inserts into a role's profile table, using the new user id. */
+    @FunctionalInterface
+    private interface ProfileInsert {
+        void insert(Connection con, int userId) throws SQLException;
+    }
+
+    private int insertUser(String fullName, String email, String phone, String passwordHash,
+                           Role role, AccountStatus status, ProfileInsert profile) {
+        String sql = "INSERT INTO users (full_name, email, phone, password_hash, role, account_status) "
+                   + "VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection con = DatabaseConfig.getConnection()) {
+            con.setAutoCommit(false);
+            try {
+                int userId;
+                try (PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setString(1, fullName);
+                    ps.setString(2, email);
+                    ps.setObject(3, phone, Types.VARCHAR);
+                    ps.setString(4, passwordHash);
+                    ps.setString(5, role.name());
+                    ps.setString(6, status.name());
+                    ps.executeUpdate();
+                    try (ResultSet keys = ps.getGeneratedKeys()) {
+                        keys.next();
+                        userId = keys.getInt(1);
+                    }
+                }
+                profile.insert(con, userId);
+                try (PreparedStatement ps = con.prepareStatement(
+                        "INSERT INTO audit_log (user_id, action, entity_type, entity_id, details) "
+                      + "VALUES (?, 'REGISTER', 'USER', ?, ?)")) {
+                    ps.setInt(1, userId);
+                    ps.setInt(2, userId);
+                    ps.setString(3, "New " + role.name().toLowerCase() + " account");
+                    ps.executeUpdate();
+                }
+                con.commit();
+                return userId;
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        } catch (SQLIntegrityConstraintViolationException e) {
+            // uq_users_email: someone registered this email first
+            throw new DuplicateEntryException("This email is already registered.", e);
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not create the account", e);
         }
     }
 

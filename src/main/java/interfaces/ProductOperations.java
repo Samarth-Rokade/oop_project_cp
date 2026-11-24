@@ -29,6 +29,9 @@ public interface ProductOperations {
 
     List<PriceHistory> getPriceHistory(Farmer farmer, int productId) throws ValidationException;
 
+    /** Allowed only for products that were never ordered. */
+    void deleteProduct(Farmer farmer, int productId) throws ValidationException;
+
     /** Default method: shared behaviour every implementation gets for free. */
     default boolean isLowStock(Product product) {
         return isLowStock(product.getAvailableQuantity());

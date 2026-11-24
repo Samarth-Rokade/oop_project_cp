@@ -101,6 +101,42 @@ public class ProductDAO {
         }
     }
 
+    /** How many order lines reference this product. */
+    public int countOrderItems(int productId) {
+        try (Connection con = DatabaseConfig.getConnection();
+             PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM order_item WHERE product_id = ?")) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not check orders of product #" + productId, e);
+        }
+    }
+
+    /**
+     * Deletes a product that has never been ordered. The NOT EXISTS check
+     * and the fk_item_product (ON DELETE RESTRICT) foreign key both make
+     * sure order history is never lost. Price history rows are removed by
+     * ON DELETE CASCADE.
+     *
+     * @return true if the row was deleted
+     */
+    public boolean deleteIfNeverOrdered(int productId, int farmerId) {
+        String sql = "DELETE FROM product WHERE product_id = ? AND farmer_id = ? "
+                   + "AND NOT EXISTS (SELECT 1 FROM order_item oi WHERE oi.product_id = ?)";
+        try (Connection con = DatabaseConfig.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            ps.setInt(2, farmerId);
+            ps.setInt(3, productId);
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not delete product #" + productId, e);
+        }
+    }
+
     /** Binds the columns shared by INSERT and UPDATE; returns the next parameter index. */
     private int setEditableColumns(PreparedStatement ps, Product p, int i) throws SQLException {
         ps.setInt(i++, p.getCategoryId());
