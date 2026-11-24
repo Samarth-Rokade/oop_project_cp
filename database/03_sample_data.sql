@@ -76,12 +76,17 @@ INSERT INTO product (product_id, farmer_id, category_id, product_name, descripti
  (11, 2, 1, 'Spinach',         'Palak bunches',                   'BUNCH',     0.00,   15.00, '2026-11-19', 'OUT_OF_STOCK', '2026-11-19 07:00:00'),
  (12, 4, 1, 'Brinjal',         'Purple brinjal',                  'KG',      200.00,   35.00, '2026-11-21', 'INACTIVE',     '2026-11-21 07:00:00');
 
+-- updated_at would otherwise be the time this script ran
+UPDATE product SET updated_at = created_at;
+
 INSERT INTO orders (order_id, buyer_id, delivery_address_id, order_date, order_status, total_amount) VALUES
  (1, 5, 1, '2026-11-18 18:30:00', 'DELIVERED',   2680.00),
  (2, 6, 2, '2026-11-21 09:10:00', 'CONFIRMED',  21700.00),
  (3, 5, 4, '2026-11-23 20:05:00', 'PLACED',       960.00),
  (4, 7, 3, '2026-11-19 11:00:00', 'CANCELLED',    550.00),
  (5, 6, 2, '2026-11-22 08:45:00', 'DISPATCHED',  1200.00);
+
+UPDATE orders SET updated_at = order_date;
 
 -- line_total is a generated column and is calculated by MySQL
 INSERT INTO order_item (order_item_id, order_id, product_id, quantity, unit_price_at_order) VALUES
