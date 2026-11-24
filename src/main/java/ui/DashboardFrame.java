@@ -18,8 +18,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 
 /**
- * Temporary dashboard shown after login. Replace the centre panel with
- * the real FarmerDashboard / BuyerDashboard / AdminDashboard screens.
+ * Main window after login: top bar plus the dashboard for the user's role.
  */
 public class DashboardFrame extends JFrame {
 
@@ -55,20 +54,26 @@ public class DashboardFrame extends JFrame {
         topBar.add(appName, BorderLayout.WEST);
         topBar.add(right, BorderLayout.EAST);
 
-        // ----- placeholder body -----
+        getContentPane().add(topBar, BorderLayout.NORTH);
+        getContentPane().add(createContent(user), BorderLayout.CENTER);
+    }
+
+    /** Picks the dashboard for the user's role. */
+    private static JPanel createContent(User user) {
+        if (user instanceof Farmer farmer) {
+            return new FarmerDashboard(farmer);
+        }
+        // Buyer and admin dashboards come in later steps.
         JLabel body = new JLabel("<html><div style='text-align:center'>"
                 + "<h2>" + user.getDashboardTitle() + "</h2>"
                 + "<p>" + describe(user) + "</p>"
                 + "<p style='color:#6B7280'>This screen is a placeholder - build the "
                 + user.getRole().name().charAt(0) + user.getRole().name().substring(1).toLowerCase()
                 + " dashboard here.</p></div></html>", SwingConstants.CENTER);
-
         JPanel content = new JPanel(new BorderLayout());
         content.setBackground(Theme.BACKGROUND);
         content.add(body, BorderLayout.CENTER);
-
-        getContentPane().add(topBar, BorderLayout.NORTH);
-        getContentPane().add(content, BorderLayout.CENTER);
+        return content;
     }
 
     private static String describe(User user) {
