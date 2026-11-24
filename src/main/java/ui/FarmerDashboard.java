@@ -4,6 +4,7 @@ import model.Farmer;
 import service.LookupService;
 import service.OrderService;
 import service.ProductService;
+import service.ReportService;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -18,14 +19,16 @@ public class FarmerDashboard extends SidebarDashboard {
     private final Farmer farmer;
     private final OrderService orderService = new OrderService();
     private final FarmerOrdersPanel ordersPanel;
+    private final FarmerSalesPanel salesPanel;
 
     public FarmerDashboard(Farmer farmer) {
         this.farmer = farmer;
         ordersPanel = new FarmerOrdersPanel(farmer, orderService, this::refreshNewOrderCount);
+        salesPanel = new FarmerSalesPanel(farmer, new ReportService());
 
         addPage("products", "My Products", new ProductPanel(farmer, new ProductService(), new LookupService()));
         addPage("orders", "Orders", ordersPanel);
-        addPage("sales", "Sales", placeholder("Sales", "Sales history and product performance (step 4)."));
+        addPage("sales", "Sales", salesPanel);
         addPage("profile", "Farm Profile", profilePage(farmer));
         if (!farmer.isVerified()) {
             setBanner(verificationBanner(farmer));
@@ -36,8 +39,10 @@ public class FarmerDashboard extends SidebarDashboard {
 
     @Override
     protected void onPageShown(String key) {
-        if ("orders".equals(key)) {
-            ordersPanel.reload();
+        switch (key) {
+            case "orders" -> ordersPanel.reload();
+            case "sales" -> salesPanel.reload();
+            default -> { }
         }
     }
 

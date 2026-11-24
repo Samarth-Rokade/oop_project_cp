@@ -95,11 +95,26 @@ docker compose logs -f mysql  # view MySQL logs
 
 # MySQL shell inside the container
 docker exec -it farmer-marketplace-db mysql -uroot -prootpass farmer_marketplace
-
-# Backup and restore (spec 14.5)
-docker exec farmer-marketplace-db mysqldump -uroot -prootpass --routines --triggers farmer_marketplace > backup_marketplace.sql
-docker exec -i farmer-marketplace-db mysql -uroot -prootpass farmer_marketplace < backup_marketplace.sql
 ```
+
+### Backup and restore (spec 14.5)
+
+```powershell
+# Windows
+.\scripts\backup.ps1                                  # -> backups\farmer_marketplace_<timestamp>.sql
+.\scripts\restore.ps1 -File backups\<file>.sql        # restores into a SEPARATE test database and compares row counts
+.\scripts\restore.ps1 -File backups\<file>.sql -ReplaceLive   # overwrite the real database (asks first)
+```
+```bash
+# macOS / Linux
+./scripts/backup.sh
+./scripts/restore.sh backups/<file>.sql
+```
+
+The backup uses `mysqldump --single-transaction` (a consistent snapshot without
+locking tables) and includes stored routines and triggers. By default the restore
+goes into `farmer_marketplace_restore_test`, so recovery is never tested on the
+only copy of the data. `backups/` is git-ignored.
 
 **After you change any file in `database/`**, run `docker compose down -v` and then
 `docker compose up -d` so every teammate's database is rebuilt from the same scripts.
@@ -115,6 +130,18 @@ mysql -u root -p < database/02_constraints_indexes.sql
 ```
 
 Copy `db.properties.example` to `db.properties` and change the port to **3306**.
+
+---
+
+## Files the app reads and writes
+
+| Feature | Where | Format |
+|---|---|---|
+| Report export | Farmer *Sales*, admin *Reports* → **Export CSV...** | CSV (UTF-8, opens in Excel) |
+| Product import | Farmer *My Products* → **Import CSV...** | CSV with header `product_name, category, unit, quantity, price[, harvest_date, description]`. **Save template...** writes an example. Rows are checked first; valid rows are imported in one transaction. |
+| Receipt | Buyer *My Orders* → **Save receipt...** | Plain text |
+
+Files are saved to `exports/` by default (git-ignored).
 
 ---
 

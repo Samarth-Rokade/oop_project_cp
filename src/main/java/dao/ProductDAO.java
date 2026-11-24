@@ -59,11 +59,19 @@ public class ProductDAO {
 
     /** Inserts the product and returns its generated id. */
     public int insert(Product p) {
+        try (Connection con = DatabaseConfig.getConnection()) {
+            return insert(con, p);
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not save product " + p.getProductName(), e);
+        }
+    }
+
+    /** Insert as part of the caller's transaction (used by CSV import). */
+    public int insert(Connection con, Product p) throws SQLException {
         String sql = "INSERT INTO product (farmer_id, category_id, product_name, description, unit_code, "
                    + "available_quantity, price_per_unit, harvest_date, image_path, listing_status) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (Connection con = DatabaseConfig.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, p.getFarmerId());
             setEditableColumns(ps, p, 2);
             ps.executeUpdate();
@@ -71,10 +79,8 @@ public class ProductDAO {
                 if (keys.next()) {
                     return keys.getInt(1);
                 }
-                throw new DataAccessException("No id returned for new product", null);
+                throw new SQLException("No id returned for new product");
             }
-        } catch (SQLException e) {
-            throw new DataAccessException("Could not save product " + p.getProductName(), e);
         }
     }
 

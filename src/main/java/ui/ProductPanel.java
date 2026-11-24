@@ -123,8 +123,13 @@ public class ProductPanel extends JPanel {
         addButton.setFont(addButton.getFont().deriveFont(Font.BOLD));
         addButton.setToolTipText("Add a new product (Ctrl+N)");
         addButton.addActionListener(e -> openAddDialog());
-        JPanel addWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 6));
+        JButton importButton = new JButton("Import CSV...");
+        importButton.setToolTipText("Add many products at once from a spreadsheet");
+        importButton.addActionListener(e -> new ImportProductsDialog(SwingUtilities.getWindowAncestor(this), farmer,
+                new service.ProductImportService(lookupService), () -> reload(null)).setVisible(true));
+        JPanel addWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 6));
         addWrap.setOpaque(false);
+        addWrap.add(importButton);
         addWrap.add(addButton);
 
         titleRow.add(titles, BorderLayout.WEST);

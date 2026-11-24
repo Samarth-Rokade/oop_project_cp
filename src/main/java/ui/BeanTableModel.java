@@ -14,15 +14,22 @@ import java.util.function.Predicate;
  * <pre>
  * new BeanTableModel&lt;UserSummary&gt;(
  *     new Column&lt;&gt;("Name",  UserSummary::fullName),
- *     new Column&lt;&gt;("Email", UserSummary::email));
+ *     new Column&lt;&gt;("Sales", FarmerSales::salesValue, BigDecimal.class));
  * </pre>
+ *
+ * Give a column a type (BigDecimal, Integer, LocalDate...) when it should
+ * sort numerically/chronologically; a renderer then formats it.
  *
  * @param <T> the type of object shown in each row
  */
 public class BeanTableModel<T> extends AbstractTableModel {
 
-    /** One column: header text and how to get the value from a row. */
-    public record Column<T>(String name, Function<T, ?> value) {
+    /** One column: header text, how to get the value from a row, and its type. */
+    public record Column<T>(String name, Function<T, ?> value, Class<?> type) {
+
+        public Column(String name, Function<T, ?> value) {
+            this(name, value, Object.class);
+        }
     }
 
     private final List<Column<T>> columns;
@@ -55,6 +62,24 @@ public class BeanTableModel<T> extends AbstractTableModel {
         return Optional.empty();
     }
 
+    /** Column headers, for CSV export. */
+    public List<String> headers() {
+        return columns.stream().map(Column::name).toList();
+    }
+
+    /** Raw cell values of every row, for CSV export. */
+    public List<List<Object>> rawRows() {
+        List<List<Object>> out = new ArrayList<>();
+        for (T row : rows) {
+            List<Object> values = new ArrayList<>();
+            for (Column<T> c : columns) {
+                values.add(c.value().apply(row));
+            }
+            out.add(values);
+        }
+        return out;
+    }
+
     @Override
     public int getRowCount() {
         return rows.size();
@@ -71,8 +96,15 @@ public class BeanTableModel<T> extends AbstractTableModel {
     }
 
     @Override
+    public Class<?> getColumnClass(int column) {
+        return columns.get(column).type();
+    }
+
+    @Override
     public Object getValueAt(int row, int column) {
-        Object value = columns.get(column).value().apply(rows.get(row));
-        return value == null ? "" : value;
+        Column<T> c = columns.get(column);
+        Object value = c.value().apply(rows.get(row));
+        // typed columns keep null so sorting never compares a String with a number
+        return value == null && c.type() == Object.class ? "" : value;
     }
 }
