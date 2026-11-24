@@ -11,7 +11,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.GridLayout;
 
 /** Farmer home: My Products, Orders, Sales, Farm Profile. */
 public class FarmerDashboard extends SidebarDashboard {
@@ -71,43 +70,13 @@ public class FarmerDashboard extends SidebarDashboard {
     }
 
     private static JPanel profilePage(Farmer farmer) {
-        String[][] rows = {
+        return new ProfilePanel("Farm Profile", farmer, () -> new String[][]{
                 {"Farmer", farmer.getFullName()},
                 {"Email", farmer.getEmail()},
                 {"Phone", farmer.getPhone() == null ? "-" : farmer.getPhone()},
                 {"Farm name", farmer.getFarmName()},
                 {"Farm address", farmer.getFarmAddress()},
                 {"Verification", farmer.getVerificationStatus().name()},
-        };
-        return infoPage("Farm Profile", rows);
-    }
-
-    /** Title plus a two-column key/value card. */
-    static JPanel infoPage(String titleText, String[][] rows) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Theme.BACKGROUND);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
-
-        JLabel title = new JLabel(titleText);
-        title.setFont(Theme.TITLE);
-
-        JPanel grid = new JPanel(new GridLayout(rows.length, 2, 12, 10));
-        grid.setBackground(Theme.SURFACE);
-        grid.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0xE0E0E0)),
-                BorderFactory.createEmptyBorder(16, 18, 16, 18)));
-        for (String[] row : rows) {
-            JLabel key = new JLabel(row[0]);
-            key.setForeground(Theme.TEXT_MUTED);
-            grid.add(key);
-            grid.add(new JLabel(row[1]));
-        }
-
-        JPanel north = new JPanel(new BorderLayout(0, 16));
-        north.setOpaque(false);
-        north.add(title, BorderLayout.NORTH);
-        north.add(grid, BorderLayout.CENTER);
-        panel.add(north, BorderLayout.NORTH);
-        return panel;
+        });
     }
 }

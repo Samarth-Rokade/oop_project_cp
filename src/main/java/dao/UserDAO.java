@@ -105,6 +105,66 @@ public class UserDAO {
         });
     }
 
+    /**
+     * Updates a farmer's own details (users + farmer_profile) in one transaction.
+     * Email, role, account and verification status are not changed here.
+     */
+    public void updateFarmerProfile(int farmerId, String fullName, String phone,
+                                    String farmName, String farmAddress) {
+        String profileSql = "UPDATE farmer_profile SET farm_name = ?, farm_address = ? WHERE farmer_id = ?";
+        updateUser(farmerId, fullName, phone, con -> {
+            try (PreparedStatement ps = con.prepareStatement(profileSql)) {
+                ps.setString(1, farmName);
+                ps.setString(2, farmAddress);
+                ps.setInt(3, farmerId);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    /** Updates a buyer's own details (users + buyer_profile) in one transaction. */
+    public void updateBuyerProfile(int buyerId, String fullName, String phone, Buyer.BuyerType type) {
+        String profileSql = "UPDATE buyer_profile SET buyer_type = ? WHERE buyer_id = ?";
+        updateUser(buyerId, fullName, phone, con -> {
+            try (PreparedStatement ps = con.prepareStatement(profileSql)) {
+                ps.setString(1, type.name());
+                ps.setInt(2, buyerId);
+                ps.executeUpdate();
+            }
+        });
+    }
+
+    /** Updates a role's profile table inside the caller's transaction. */
+    @FunctionalInterface
+    private interface ProfileUpdate {
+        void update(Connection con) throws SQLException;
+    }
+
+    private void updateUser(int userId, String fullName, String phone, ProfileUpdate profile) {
+        String sql = "UPDATE users SET full_name = ?, phone = ? WHERE user_id = ?";
+        try (Connection con = DatabaseConfig.getConnection()) {
+            con.setAutoCommit(false);
+            try {
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setString(1, fullName);
+                    ps.setObject(2, phone, Types.VARCHAR);
+                    ps.setInt(3, userId);
+                    if (ps.executeUpdate() == 0) {
+                        throw new SQLException("User #" + userId + " no longer exists");
+                    }
+                }
+                profile.update(con);
+                new AuditDAO().log(con, userId, "UPDATE_PROFILE", "USER", userId, "Profile details updated");
+                con.commit();
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not update the profile", e);
+        }
+    }
+
     /** Inserts into a role's profile table, using the new user id. */
     @FunctionalInterface
     private interface ProfileInsert {

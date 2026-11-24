@@ -45,6 +45,7 @@ Three kinds of tests:
 | Admin removes a listing | Farmer cannot re-activate it; restore brings it back as hidden |
 | Delete a product that has been ordered | Refused (Java message + FK `RESTRICT`) |
 | CSV import with 4 rows, 2 bad | 2 imported in one transaction; "Row 4: price "abc" is not a number", "Row 5: unknown category "Herbs"" |
+| Farmer / buyer edits their profile | Name, phone, farm name/address (farmer) or buyer type (buyer) saved to `users` + profile table in one transaction; email and verification unchanged; `UPDATE_PROFILE` written to audit log; blank name / bad phone rejected with nothing saved |
 
 ## 2. Direct database constraint tests
 
@@ -73,7 +74,7 @@ Run: `docker exec -i farmer-marketplace-db mysql -uroot -prootpass --force farme
 
 ## 3. Unit tests (no database)
 
-`./mvnw.cmd test` → **39 tests, 0 failures**.
+`./mvnw.cmd test` → **44 tests, 0 failures**.
 
 | Class | Tests | Covers |
 |---|---|---|
@@ -82,6 +83,7 @@ Run: `docker exec -i farmer-marketplace-db mysql -uroot -prootpass --force farme
 | `CartTest` | 6 | merging quantities, stock limit, totals, grouping by farm, change events |
 | `OrderStatusTest` | 4 | allowed and forbidden lifecycle transitions |
 | `RegistrationValidationTest` | 6 | password policy, email/phone format, normalisation |
+| `ProfileValidationTest` | 5 | profile edit rules: required fields, length limits, phone format, buyer type |
 | `CsvTest` | 4 | quoting, parsing quotes/commas/line breaks, UTF-8 BOM round trip |
 | `ProductImportTest` | 4 | header in any order, per-row problems with row numbers |
 | `ReceiptFormatterTest` | 1 | receipt contents and total |
