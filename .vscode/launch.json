@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run Marketplace",
+      "request": "launch",
+      "mainClass": "app.Main",
+      "projectName": "digital-farmer-marketplace",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

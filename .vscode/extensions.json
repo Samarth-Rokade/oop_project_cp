@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "vscjava.vscode-java-pack",
+    "ms-azuretools.vscode-docker",
+    "cweijan.vscode-database-client2"
+  ]
+}

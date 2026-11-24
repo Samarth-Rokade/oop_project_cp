@@ -1,0 +1,22 @@
+# Build output
+target/
+
+# Local database credentials (commit db.properties.example instead)
+db.properties
+.env
+
+# Generated reports, CSV exports and backups
+exports/*
+!exports/.gitkeep
+*.sql.bak
+backup_*.sql
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

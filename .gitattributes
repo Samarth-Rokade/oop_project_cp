@@ -1,0 +1,9 @@
+* text=auto
+mvnw text eol=lf
+*.sh text eol=lf
+# SQL runs inside the Linux MySQL container - keep LF so DELIMITER $$ works
+*.sql text eol=lf
+*.yml text eol=lf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary

@@ -1,0 +1,38 @@
+# Local MySQL for the Digital Farmer-to-Buyer Marketplace.
+#
+#   Start:            docker compose up -d
+#   Stop:             docker compose down
+#   Reset everything: docker compose down -v   (deletes all data, re-runs database/*.sql on next start)
+#
+# On FIRST start, MySQL runs every database/*.sql file in name order
+# (01_..., 02_..., ...). Sub-folders such as database/demo/ are NOT run.
+#
+# Host port is 3307 (not 3306) so it never clashes with a MySQL that is
+# already installed on someone's machine.
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: farmer-marketplace-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: farmer_marketplace
+      TZ: Asia/Kolkata
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+05:30
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  db_data:

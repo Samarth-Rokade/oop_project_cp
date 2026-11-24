@@ -1,0 +1,13 @@
+# Database settings for the Swing app.
+#
+# The app reads db.properties (your own copy, NOT committed to git).
+# If db.properties is missing it falls back to this example file, which
+# already matches the Docker setup in docker-compose.yml.
+#
+# Using MySQL installed directly instead of Docker? Copy this file to
+# db.properties and change the port to 3306 (and the user/password if
+# you created them differently).
+
+db.url=jdbc:mysql://localhost:3307/farmer_marketplace?useSSL=false&allowPublicKeyRetrieval=true
+db.user=market_app
+db.password=market_app_pass
