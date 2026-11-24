@@ -27,7 +27,7 @@ public class BuyerDashboard extends SidebarDashboard {
         addPage("browse", "Browse Products", new BrowsePanel(catalogService, new LookupService(), cart));
         addPage("cart", "Cart", cartPanel);
         addPage("orders", "My Orders", ordersPanel);
-        addPage("profile", "Profile", FarmerDashboard.infoPage("Profile", new String[][]{
+        addPage("profile", "Profile", new ProfilePanel("Profile", buyer, () -> new String[][]{
                 {"Name", buyer.getFullName()},
                 {"Email", buyer.getEmail()},
                 {"Phone", buyer.getPhone() == null ? "-" : buyer.getPhone()},
