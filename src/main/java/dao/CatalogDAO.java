@@ -90,7 +90,7 @@ public class CatalogDAO {
     }
 
     /** % and _ are wildcards in LIKE; escape them so they match literally. */
-    private static String escapeLike(String text) {
+    static String escapeLike(String text) {
         return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 

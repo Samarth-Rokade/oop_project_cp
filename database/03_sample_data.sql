@@ -114,7 +114,7 @@ INSERT INTO delivery (delivery_id, order_id, delivery_status, dispatch_date, del
 
 INSERT INTO price_history (product_id, old_price, new_price, changed_at, changed_by) VALUES
  (6, 130.00, 140.00, '2026-11-23 07:30:00', 3),
- (1,  30.00,  28.00, '2026-11-20 07:00:00', 2);
+ (1,  30.00,  28.00, '2026-11-17 07:00:00', 2);   -- before order 1 bought Tomato at 28
 
 INSERT INTO audit_log (user_id, action, entity_type, entity_id, action_time, details) VALUES
  (1, 'VERIFY_FARMER',  'FARMER_PROFILE', 2, '2026-01-11 10:00:00', 'Farmer verified by admin'),

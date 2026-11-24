@@ -6,6 +6,10 @@ Integrated course project for **OOP with Java** and **DBMS**: a Java Swing
 desktop application backed by MySQL through JDBC. The full requirements are
 in `Digital_Farmer_to_Buyer_Marketplace_Project_Requirements (1).md`.
 
+The DBMS and design write-ups (ER diagram, normalization, relational algebra,
+query optimization, transactions, test cases, syllabus coverage) are in
+[`reports/`](reports/README.md).
+
 ---
 
 ## What you need
