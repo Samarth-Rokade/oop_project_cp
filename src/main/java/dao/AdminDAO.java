@@ -236,7 +236,7 @@ public class AdminDAO {
         }
         if (text != null && !text.isBlank()) {
             sql.append(" AND (u.full_name LIKE ? OR a.details LIKE ? OR a.entity_type LIKE ?)");
-            String like = "%" + text.trim() + "%";
+            String like = "%" + CatalogDAO.escapeLike(text.trim()) + "%";
             params.add(like);
             params.add(like);
             params.add(like);
