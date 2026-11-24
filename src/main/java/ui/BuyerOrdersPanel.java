@@ -153,6 +153,8 @@ public class BuyerOrdersPanel extends JPanel {
         detailHeader.setText("<html><b>Order #" + o.getOrderId() + "</b> &nbsp;•&nbsp; "
                 + "Deliver to " + o.getDeliverTo() + " &nbsp;•&nbsp; "
                 + (o.getPaymentMethod() == null ? "" : o.getPaymentMethod() + ", " + o.getPaymentStatus())
+                + (o.getDeliveryPartner() == null ? "" : " &nbsp;•&nbsp; Shipped via " + o.getDeliveryPartner()
+                        + (o.getTrackingReference() == null ? "" : " (" + o.getTrackingReference() + ")"))
                 + "</html>");
         int mySequence = ++detailSequence;
         Async.run(this, () -> orderService.getItems(buyer, o), items -> {

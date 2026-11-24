@@ -13,6 +13,7 @@
 --
 -- IDs are explicit so demo queries and test cases can refer to them.
 -- Order totals equal the sum of their line totals.
+-- Every order contains products from ONE farm (the app places one order per farm).
 -- =====================================================================
 USE farmer_marketplace;
 
@@ -66,11 +67,11 @@ INSERT INTO product (product_id, farmer_id, category_id, product_name, descripti
  (1,  2, 1, 'Tomato',          'Firm red hybrid tomatoes',        'KG',      450.00,   28.00, '2026-11-18', 'ACTIVE',       '2026-11-18 08:00:00'),
  (2,  2, 1, 'Onion',           'Red onion, medium size',          'KG',      760.00,   32.00, '2026-11-10', 'ACTIVE',       '2026-11-10 08:00:00'),
  (3,  2, 1, 'Potato',          'Table potatoes',                  'KG',     1000.00,   22.00, '2026-11-05', 'ACTIVE',       '2026-11-05 08:00:00'),
- (4,  2, 2, 'Banana',          'Robusta bananas',                 'DOZEN',   190.00,   55.00, '2026-11-20', 'ACTIVE',       '2026-11-20 08:00:00'),
+ (4,  2, 2, 'Banana',          'Robusta bananas',                 'DOZEN',   200.00,   55.00, '2026-11-20', 'ACTIVE',       '2026-11-20 08:00:00'),
  (5,  3, 2, 'Alphonso Mango',  'Ratnagiri Alphonso, export grade','DOZEN',   118.00,  480.00, '2026-11-15', 'ACTIVE',       '2026-11-15 08:00:00'),
  (6,  3, 2, 'Pomegranate',     'Bhagwa variety',                  'KG',      145.00,  140.00, '2026-11-12', 'ACTIVE',       '2026-11-12 08:00:00'),
  (7,  3, 3, 'Basmati Rice',    'Aged basmati, long grain',        'QUINTAL',  38.00, 9500.00, '2026-10-25', 'ACTIVE',       '2026-10-25 08:00:00'),
- (8,  3, 3, 'Toor Dal',        'Unpolished toor dal',             'KG',      280.00,  135.00, '2026-10-30', 'ACTIVE',       '2026-10-30 08:00:00'),
+ (8,  3, 3, 'Toor Dal',        'Unpolished toor dal',             'KG',      270.00,  135.00, '2026-10-30', 'ACTIVE',       '2026-10-30 08:00:00'),
  (9,  3, 5, 'Turmeric',        'Rajapuri turmeric fingers',       'KG',        8.00,  180.00, '2026-09-28', 'ACTIVE',       '2026-09-28 08:00:00'),
  (10, 2, 4, 'Cow Milk',        'Fresh A2 cow milk, daily',        'LITRE',   100.00,   60.00, '2026-11-24', 'ACTIVE',       '2026-11-24 06:00:00'),
  (11, 2, 1, 'Spinach',         'Palak bunches',                   'BUNCH',     0.00,   15.00, '2026-11-19', 'OUT_OF_STOCK', '2026-11-19 07:00:00'),
@@ -84,7 +85,7 @@ INSERT INTO orders (order_id, buyer_id, delivery_address_id, order_date, order_s
  (2, 6, 2, '2026-11-21 09:10:00', 'CONFIRMED',  21700.00),
  (3, 5, 4, '2026-11-23 20:05:00', 'PLACED',       960.00),
  (4, 7, 3, '2026-11-19 11:00:00', 'CANCELLED',    550.00),
- (5, 6, 2, '2026-11-22 08:45:00', 'DISPATCHED',  1200.00);
+ (5, 6, 2, '2026-11-22 08:45:00', 'DISPATCHED',  2000.00);
 
 UPDATE orders SET updated_at = order_date;
 
@@ -96,7 +97,7 @@ INSERT INTO order_item (order_item_id, order_id, product_id, quantity, unit_pric
  (4, 2, 8, 20.00,  135.00),   -- 2700.00
  (5, 3, 5,  2.00,  480.00),   -- 960.00
  (6, 4, 3, 25.00,   22.00),   -- 550.00 (cancelled - stock restored)
- (7, 5, 4, 10.00,   55.00),   -- 550.00
+ (7, 5, 8, 10.00,  135.00),   -- 1350.00
  (8, 5, 6,  5.00,  130.00);   -- 650.00 (ordered before price rose to 140)
 
 INSERT INTO payment (payment_id, order_id, payment_method, amount, payment_status, payment_date, transaction_reference) VALUES
@@ -104,7 +105,7 @@ INSERT INTO payment (payment_id, order_id, payment_method, amount, payment_statu
  (2, 2, 'NETBANKING',21700.00, 'PAID',     '2026-11-21 09:12:00', 'SIM-NB-000002'),
  (3, 3, 'COD',         960.00, 'PENDING',  NULL,                  NULL),
  (4, 4, 'UPI',         550.00, 'REFUNDED', '2026-11-19 11:02:00', 'SIM-UPI-000004'),
- (5, 5, 'CARD',       1200.00, 'PAID',     '2026-11-22 08:46:00', 'SIM-CARD-000005');
+ (5, 5, 'CARD',       2000.00, 'PAID',     '2026-11-22 08:46:00', 'SIM-CARD-000005');
 
 INSERT INTO delivery (delivery_id, order_id, delivery_status, dispatch_date, delivery_date, delivery_partner, tracking_reference) VALUES
  (1, 1, 'DELIVERED',  '2026-11-19', '2026-11-20', 'KisanLogistics', 'KL-1001'),
