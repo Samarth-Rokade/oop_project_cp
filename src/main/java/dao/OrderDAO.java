@@ -329,6 +329,21 @@ public class OrderDAO {
                 + "ORDER BY (o.order_status = 'PLACED') DESC, o.order_date DESC, o.order_id DESC", farmerId);
     }
 
+    /** Every order in the marketplace, newest first (administrator). */
+    public List<Order> findAll() {
+        List<Order> orders = new ArrayList<>();
+        try (Connection con = DatabaseConfig.getConnection();
+             PreparedStatement ps = con.prepareStatement(ORDER_LIST_SELECT + "ORDER BY o.order_date DESC, o.order_id DESC");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                orders.add(mapOrder(rs));
+            }
+            return orders;
+        } catch (SQLException e) {
+            throw new DataAccessException("Could not load orders", e);
+        }
+    }
+
     /** Number of new orders waiting for this farmer to accept or reject. */
     public int countAwaitingFarmer(int farmerId) {
         String sql = "SELECT COUNT(*) FROM orders o " + FOR_FARMER + "AND o.order_status = 'PLACED'";

@@ -473,29 +473,4 @@ public class ProductPanel extends JPanel {
 
     private record Lookups(List<Category> categories, List<Unit> units) {
     }
-
-    /** Small summary tile with a coloured number. */
-    private static class StatCard extends JPanel {
-        private final JLabel valueLabel = new JLabel("-");
-
-        StatCard(String title, Color accent) {
-            super(new BorderLayout(0, 4));
-            setBackground(Theme.SURFACE);
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 4, 0, 0, accent),
-                    BorderFactory.createCompoundBorder(
-                            BorderFactory.createMatteBorder(1, 0, 1, 1, new Color(0xE0E0E0)),
-                            BorderFactory.createEmptyBorder(12, 14, 12, 14))));
-            JLabel titleLabel = new JLabel(title);
-            titleLabel.setForeground(Theme.TEXT_MUTED);
-            valueLabel.setFont(Theme.TITLE.deriveFont(26f));
-            valueLabel.setForeground(accent);
-            add(titleLabel, BorderLayout.NORTH);
-            add(valueLabel, BorderLayout.CENTER);
-        }
-
-        void setValue(String value) {
-            valueLabel.setText(value);
-        }
-    }
 }

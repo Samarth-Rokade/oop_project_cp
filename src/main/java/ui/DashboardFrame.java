@@ -66,7 +66,9 @@ public class DashboardFrame extends JFrame {
         if (user instanceof Buyer buyer) {
             return new BuyerDashboard(buyer);
         }
-        // Admin dashboard comes in a later step.
+        if (user instanceof model.Admin admin) {
+            return new AdminDashboard(admin);
+        }
         JLabel body = new JLabel("<html><div style='text-align:center'>"
                 + "<h2>" + user.getDashboardTitle() + "</h2>"
                 + "<p>" + describe(user) + "</p>"
