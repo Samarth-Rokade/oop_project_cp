@@ -22,8 +22,12 @@ import java.awt.FlowLayout;
  */
 public class DashboardFrame extends JFrame {
 
+    private final User user;
+    private final JLabel who = new JLabel();
+
     public DashboardFrame(User user, AuthenticationService authService) {
         super(user.getDashboardTitle());       // polymorphic call
+        this.user = user;
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(1100, 680));
         setLocationRelativeTo(null);
@@ -37,7 +41,7 @@ public class DashboardFrame extends JFrame {
         appName.setFont(Theme.HEADING);
         appName.setForeground(Color.WHITE);
 
-        JLabel who = new JLabel(user.getFullName() + "  •  " + user.getRole());
+        who.setText(user.getFullName() + "  •  " + user.getRole());
         who.setForeground(Theme.PRIMARY_LIGHT);
         JButton logout = new JButton("Log out");
         logout.addActionListener(e -> {
@@ -56,6 +60,12 @@ public class DashboardFrame extends JFrame {
 
         getContentPane().add(topBar, BorderLayout.NORTH);
         getContentPane().add(createContent(user), BorderLayout.CENTER);
+    }
+
+    /** Re-reads the name shown in the title and top bar, e.g. after the user edits their profile. */
+    public void refreshUserDetails() {
+        setTitle(user.getDashboardTitle());
+        who.setText(user.getFullName() + "  •  " + user.getRole());
     }
 
     /** Picks the dashboard for the user's role. */

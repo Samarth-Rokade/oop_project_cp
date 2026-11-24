@@ -41,19 +41,10 @@ public class RegistrationService {
     public int registerFarmer(AccountDetails account, String farmName, String farmAddress) throws ValidationException {
         StringJoiner errors = new StringJoiner("\n");
         validateAccount(account, errors);
+        validateFarm(farmName, farmAddress, errors);
+        throwIfAny(errors);
         String farm = trim(farmName);
         String address = trim(farmAddress);
-        if (farm.isEmpty()) {
-            errors.add("Farm name is required.");
-        } else if (farm.length() > 120) {
-            errors.add("Farm name must be at most 120 characters.");
-        }
-        if (address.isEmpty()) {
-            errors.add("Farm address is required.");
-        } else if (address.length() > 255) {
-            errors.add("Farm address must be at most 255 characters.");
-        }
-        throwIfAny(errors);
 
         String email = normaliseEmail(account.email());
         checkEmailFree(email);
@@ -87,12 +78,7 @@ public class RegistrationService {
     // ------------------------------------------------------------------ rules (static so they can be unit-tested)
 
     static void validateAccount(AccountDetails a, StringJoiner errors) {
-        String name = trim(a.fullName());
-        if (name.isEmpty()) {
-            errors.add("Full name is required.");
-        } else if (name.length() > 100) {
-            errors.add("Full name must be at most 100 characters.");
-        }
+        validateName(a.fullName(), errors);
 
         String email = normaliseEmail(a.email());
         if (email.isEmpty()) {
@@ -101,14 +87,45 @@ public class RegistrationService {
             errors.add("Enter a valid email address, e.g. name@example.com.");
         }
 
-        String phone = trim(a.phone());
-        if (!phone.isEmpty() && !PHONE.matcher(phone).matches()) {
-            errors.add("Phone must be a 10-digit mobile number starting with 6-9 (or leave it empty).");
-        }
+        validatePhone(a.phone(), errors);
 
         passwordProblem(a.password()).ifPresent(errors::add);
         if (a.password() != null && !Arrays.equals(a.password(), a.confirmPassword())) {
             errors.add("Passwords do not match.");
+        }
+    }
+
+    /** Shared with {@link ProfileService}: full name is required, max 100 characters. */
+    static void validateName(String fullName, StringJoiner errors) {
+        String name = trim(fullName);
+        if (name.isEmpty()) {
+            errors.add("Full name is required.");
+        } else if (name.length() > 100) {
+            errors.add("Full name must be at most 100 characters.");
+        }
+    }
+
+    /** Shared with {@link ProfileService}: phone is optional, else an Indian mobile number. */
+    static void validatePhone(String phone, StringJoiner errors) {
+        String p = trim(phone);
+        if (!p.isEmpty() && !PHONE.matcher(p).matches()) {
+            errors.add("Phone must be a 10-digit mobile number starting with 6-9 (or leave it empty).");
+        }
+    }
+
+    /** Shared with {@link ProfileService}: farm name (max 120) and address (max 255) are required. */
+    static void validateFarm(String farmName, String farmAddress, StringJoiner errors) {
+        String farm = trim(farmName);
+        String address = trim(farmAddress);
+        if (farm.isEmpty()) {
+            errors.add("Farm name is required.");
+        } else if (farm.length() > 120) {
+            errors.add("Farm name must be at most 120 characters.");
+        }
+        if (address.isEmpty()) {
+            errors.add("Farm address is required.");
+        } else if (address.length() > 255) {
+            errors.add("Farm address must be at most 255 characters.");
         }
     }
 
@@ -146,16 +163,16 @@ public class RegistrationService {
         return trim(email).toLowerCase();
     }
 
-    private static String phoneOrNull(String phone) {
+    static String phoneOrNull(String phone) {
         String p = trim(phone);
         return p.isEmpty() ? null : p;
     }
 
-    private static String trim(String s) {
+    static String trim(String s) {
         return s == null ? "" : s.trim();
     }
 
-    private static void throwIfAny(StringJoiner errors) throws ValidationException {
+    static void throwIfAny(StringJoiner errors) throws ValidationException {
         if (errors.length() > 0) {
             throw new ValidationException(errors.toString());
         }
