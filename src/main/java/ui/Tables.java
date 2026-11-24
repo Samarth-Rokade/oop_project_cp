@@ -1,5 +1,8 @@
 package ui;
 
+import model.AccountStatus;
+import model.Farmer;
+import model.ListingStatus;
 import model.OrderStatus;
 import model.PaymentStatus;
 
@@ -54,6 +57,47 @@ public final class Tables {
         };
     }
 
+    private static final Color GREEN = new Color(0x2E7D32);
+    private static final Color ORANGE = new Color(0xE65100);
+    private static final Color RED = new Color(0xC62828);
+
+    /** Colour for any of the status enums shown in tables. */
+    static Color colorOf(Object value, Color fallback) {
+        if (value instanceof OrderStatus s) {
+            return colorOf(s);
+        }
+        if (value instanceof PaymentStatus s) {
+            return switch (s) {
+                case PAID -> GREEN;
+                case PENDING -> ORANGE;
+                default -> Theme.TEXT_MUTED;
+            };
+        }
+        if (value instanceof ListingStatus s) {
+            return switch (s) {
+                case ACTIVE -> GREEN;
+                case OUT_OF_STOCK -> RED;
+                case INACTIVE -> Theme.TEXT_MUTED;
+                case REMOVED -> ORANGE;
+            };
+        }
+        if (value instanceof AccountStatus s) {
+            return switch (s) {
+                case ACTIVE -> GREEN;
+                case PENDING -> ORANGE;
+                case SUSPENDED -> RED;
+            };
+        }
+        if (value instanceof Farmer.VerificationStatus s) {
+            return switch (s) {
+                case VERIFIED -> GREEN;
+                case PENDING -> ORANGE;
+                case REJECTED -> RED;
+            };
+        }
+        return fallback;
+    }
+
     private static class PaddedRenderer extends DefaultTableCellRenderer {
         PaddedRenderer(int alignment) {
             setHorizontalAlignment(alignment);
@@ -68,7 +112,7 @@ public final class Tables {
         }
     }
 
-    /** Coloured dot + label for OrderStatus / PaymentStatus values. */
+    /** Coloured dot + label for the status enums. */
     private static class StatusRenderer extends PaddedRenderer {
         StatusRenderer() {
             super(SwingConstants.LEFT);
@@ -80,17 +124,14 @@ public final class Tables {
             JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             if (value instanceof OrderStatus status) {
                 label.setText("●  " + status.getLabel());
-                if (!isSelected) {
-                    label.setForeground(colorOf(status));
-                }
-            } else if (value instanceof PaymentStatus status && !isSelected) {
-                label.setForeground(switch (status) {
-                    case PAID -> new Color(0x2E7D32);
-                    case PENDING -> new Color(0xE65100);
-                    default -> Theme.TEXT_MUTED;
-                });
-            } else if (!isSelected) {
-                label.setForeground(table.getForeground());
+            } else if (value instanceof ListingStatus status) {
+                label.setText("●  " + status.getLabel());
+            } else if (value instanceof AccountStatus || value instanceof Farmer.VerificationStatus) {
+                String name = ((Enum<?>) value).name();
+                label.setText("●  " + name.charAt(0) + name.substring(1).toLowerCase());
+            }
+            if (!isSelected) {
+                label.setForeground(colorOf(value, table.getForeground()));
             }
             return label;
         }
