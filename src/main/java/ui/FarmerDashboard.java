@@ -5,72 +5,24 @@ import service.LookupService;
 import service.ProductService;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JToggleButton;
-import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
-import java.awt.CardLayout;
 import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 
-/**
- * Farmer home: sidebar navigation + CardLayout content area.
- */
-public class FarmerDashboard extends JPanel {
-
-    private final CardLayout cards = new CardLayout();
-    private final JPanel content = new JPanel(cards);
-    private final ButtonGroup navGroup = new ButtonGroup();
-    private final JPanel sidebar = new JPanel();
+/** Farmer home: My Products, Orders, Sales, Farm Profile. */
+public class FarmerDashboard extends SidebarDashboard {
 
     public FarmerDashboard(Farmer farmer) {
-        super(new BorderLayout());
-
-        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
-        sidebar.setBackground(Theme.SURFACE);
-        sidebar.setPreferredSize(new Dimension(200, 0));
-        sidebar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(0xE0E0E0)),
-                BorderFactory.createEmptyBorder(16, 10, 16, 10)));
-
         addPage("products", "My Products", new ProductPanel(farmer, new ProductService(), new LookupService()));
         addPage("orders", "Orders", placeholder("Orders", "Incoming orders will appear here (step 3)."));
         addPage("sales", "Sales", placeholder("Sales", "Sales history and product performance (step 4)."));
         addPage("profile", "Farm Profile", profilePage(farmer));
-        sidebar.add(Box.createVerticalGlue());
-
-        JPanel main = new JPanel(new BorderLayout());
         if (!farmer.isVerified()) {
-            main.add(verificationBanner(farmer), BorderLayout.NORTH);
+            setBanner(verificationBanner(farmer));
         }
-        main.add(content, BorderLayout.CENTER);
-
-        add(sidebar, BorderLayout.WEST);
-        add(main, BorderLayout.CENTER);
-
-        // first page selected by default
-        navGroup.getElements().nextElement().setSelected(true);
-        cards.show(content, "products");
-    }
-
-    private void addPage(String key, String title, JPanel page) {
-        content.add(page, key);
-
-        JToggleButton button = new JToggleButton(title);
-        button.putClientProperty("JButton.buttonType", "borderless");
-        button.setHorizontalAlignment(SwingConstants.LEFT);
-        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        button.setAlignmentX(LEFT_ALIGNMENT);
-        button.setFocusable(false);
-        button.addActionListener(e -> cards.show(content, key));
-        navGroup.add(button);
-        sidebar.add(button);
-        sidebar.add(Box.createVerticalStrut(4));
+        showPage("products");
     }
 
     private static JPanel verificationBanner(Farmer farmer) {
@@ -90,23 +42,7 @@ public class FarmerDashboard extends JPanel {
         return banner;
     }
 
-    private static JPanel placeholder(String title, String text) {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(Theme.BACKGROUND);
-        JLabel label = new JLabel("<html><div style='text-align:center'><h2>" + title + "</h2>"
-                + "<p style='color:#6B7280'>" + text + "</p></div></html>");
-        panel.add(label);
-        return panel;
-    }
-
     private static JPanel profilePage(Farmer farmer) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Theme.BACKGROUND);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
-
-        JLabel title = new JLabel("Farm Profile");
-        title.setFont(Theme.TITLE);
-
         String[][] rows = {
                 {"Farmer", farmer.getFullName()},
                 {"Email", farmer.getEmail()},
@@ -115,7 +51,19 @@ public class FarmerDashboard extends JPanel {
                 {"Farm address", farmer.getFarmAddress()},
                 {"Verification", farmer.getVerificationStatus().name()},
         };
-        JPanel grid = new JPanel(new java.awt.GridLayout(rows.length, 2, 12, 10));
+        return infoPage("Farm Profile", rows);
+    }
+
+    /** Title plus a two-column key/value card. */
+    static JPanel infoPage(String titleText, String[][] rows) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Theme.BACKGROUND);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 24, 16, 24));
+
+        JLabel title = new JLabel(titleText);
+        title.setFont(Theme.TITLE);
+
+        JPanel grid = new JPanel(new GridLayout(rows.length, 2, 12, 10));
         grid.setBackground(Theme.SURFACE);
         grid.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(0xE0E0E0)),

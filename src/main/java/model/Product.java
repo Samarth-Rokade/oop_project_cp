@@ -24,6 +24,9 @@ public class Product {
     private ListingStatus listingStatus = ListingStatus.ACTIVE;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    /** Seller info - filled when products are loaded for buyers. */
+    private String farmName;
+    private String farmerName;
 
     public Product() {
     }
@@ -44,6 +47,8 @@ public class Product {
         this.listingStatus = other.listingStatus;
         this.createdAt = other.createdAt;
         this.updatedAt = other.updatedAt;
+        this.farmName = other.farmName;
+        this.farmerName = other.farmerName;
     }
 
     /**
@@ -175,6 +180,22 @@ public class Product {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getFarmName() {
+        return farmName;
+    }
+
+    public void setFarmName(String farmName) {
+        this.farmName = farmName;
+    }
+
+    public String getFarmerName() {
+        return farmerName;
+    }
+
+    public void setFarmerName(String farmerName) {
+        this.farmerName = farmerName;
     }
 
     @Override
