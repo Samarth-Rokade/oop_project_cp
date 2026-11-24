@@ -99,6 +99,26 @@ public class ProductService implements ProductOperations {
         return reload(productId);
     }
 
+    /**
+     * Deletes a product only if it has never been ordered. Products that
+     * appear in orders must stay so order history remains complete; the
+     * farmer can hide them instead.
+     */
+    @Override
+    public void deleteProduct(Farmer farmer, int productId) throws ValidationException {
+        Product product = loadOwned(farmer, productId);
+        int orderLines = productDAO.countOrderItems(productId);
+        if (orderLines > 0) {
+            throw new ValidationException("\"" + product.getProductName() + "\" appears in " + orderLines
+                    + (orderLines == 1 ? " order" : " orders") + ", so it cannot be deleted - order history must be kept.\n"
+                    + "Use \"Hide from buyers\" instead.");
+        }
+        if (!productDAO.deleteIfNeverOrdered(productId, farmer.getUserId())) {
+            // an order arrived between the check and the delete
+            throw new ValidationException("\"" + product.getProductName() + "\" was just ordered, so it cannot be deleted.");
+        }
+    }
+
     @Override
     public List<PriceHistory> getPriceHistory(Farmer farmer, int productId) throws ValidationException {
         loadOwned(farmer, productId);

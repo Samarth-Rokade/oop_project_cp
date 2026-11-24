@@ -79,6 +79,7 @@ public class ProductPanel extends JPanel {
     private final JButton stockButton = new JButton("Update stock");
     private final JButton visibilityButton = new JButton("Hide from buyers");
     private final JButton historyButton = new JButton("Price history");
+    private final JButton deleteButton = new JButton("Delete");
 
     public ProductPanel(Farmer farmer, ProductService productService, LookupService lookupService) {
         super(new BorderLayout());
@@ -225,12 +226,16 @@ public class ProductPanel extends JPanel {
         stockButton.addActionListener(e -> promptStockUpdate());
         visibilityButton.addActionListener(e -> toggleVisibility());
         historyButton.addActionListener(e -> showPriceHistory());
+        deleteButton.setForeground(Theme.ERROR);
+        deleteButton.setToolTipText("Only products that were never ordered can be deleted (Delete key)");
+        deleteButton.addActionListener(e -> deleteSelected());
 
         JLabel hint = new JLabel("Tip: double-click a row to edit it.");
         hint.setForeground(Theme.TEXT_MUTED);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
+        buttons.add(deleteButton);
         buttons.add(historyButton);
         buttons.add(visibilityButton);
         buttons.add(stockButton);
@@ -254,6 +259,9 @@ public class ProductPanel extends JPanel {
         table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
                 .put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "editRow");
         table.getActionMap().put("editRow", action(this::openEditDialog));
+        table.getInputMap(JComponent.WHEN_FOCUSED)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "deleteRow");
+        table.getActionMap().put("deleteRow", action(this::deleteSelected));
     }
 
     private void bindKey(KeyStroke key, String name, Runnable runnable) {
@@ -364,6 +372,7 @@ public class ProductPanel extends JPanel {
         stockButton.setEnabled(editable);
         visibilityButton.setEnabled(editable);
         historyButton.setEnabled(selected.isPresent());
+        deleteButton.setEnabled(editable);
         visibilityButton.setText(selected.map(p -> p.getListingStatus() == ListingStatus.INACTIVE)
                 .orElse(false) ? "Show to buyers" : "Hide from buyers");
     }
@@ -428,6 +437,24 @@ public class ProductPanel extends JPanel {
                         }
                     });
         });
+    }
+
+    private void deleteSelected() {
+        selectedProduct()
+                .filter(p -> p.getListingStatus() != ListingStatus.REMOVED)
+                .ifPresent(product -> {
+                    if (!Dialogs.confirm(this, "Delete \"" + product.getProductName() + "\" permanently?\n"
+                            + "This also removes its price history and cannot be undone.")) {
+                        return;
+                    }
+                    Async.run(this, () -> {
+                        productService.deleteProduct(farmer, product.getProductId());
+                        return product.getProductName();
+                    }, name -> {
+                        reload(null);
+                        Dialogs.info(this, "\"" + name + "\" was deleted.");
+                    });
+                });
     }
 
     private void showPriceHistory() {
